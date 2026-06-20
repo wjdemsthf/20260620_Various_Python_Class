@@ -84,6 +84,8 @@ elif sample_option == "고흐 - 별이 빛나는 밤":
     img = load_image_from_github("Starry_Night.jpg")
 elif sample_option == "뭉크 - 절규":
     img = load_image_from_github("The_Scream.jpg")
+elif sample_option == "베르메르 - 진주 귀걸이를 한 소녀":
+    img = load_image_from_github("진주 귀걸이를 한 소녀.jpg")
 
 # 3. 메인 로직 작동
 if img is not None:
