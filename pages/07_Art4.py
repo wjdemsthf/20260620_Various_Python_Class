@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from sklearn.cluster import KMeans
+import plotly.express as px
 import plotly.graph_objects as go
 import math
 import requests
@@ -126,27 +127,34 @@ if img is not None:
         with col2:
             st.subheader("AI 보석십자수 도안 결과 (마우스 커서를 올려보세요!)")
             
-            # 🌟 변경포인트: 2D 도안 이미지에 마우스 오버 시 #FFFFFF 코드가 뜨도록 Plotly 차트 인터랙션 처리
-            # 각 픽셀 칸에 매핑될 Hex 코드 텍스트 2차원 배열 빌드
+            # 2차원 도안용 커스텀 텍스트 맵 빌드
             labels_2d = labels_current.reshape(target_height, target_width)
             text_matrix = []
             for r in range(target_height):
                 row_text = []
                 for c in range(target_width):
                     c_idx = labels_2d[r, c]
-                    row_text.append(f"좌표: ({c}, {r})<br>보석 번호: {c_idx+1}번<br>색상 코드: {hex_colors[c_idx]}")
+                    row_text.append(f"보석 {c_idx+1}번 ({hex_colors[c_idx]})")
                 text_matrix.append(row_text)
                 
-            # 이미지 배열을 Plotly go.Image 인터페이스에 맞게 정돈
-            fig_canvas = go.Figure(go.Image(
-                z=quantized_small_np,
-                text=text_matrix,
-                hoverinfo="text" # 오직 우리가 매핑한 텍스트 툴팁만 팝업 유도
-            ))
+            # go.Image 대안으로 벨리데이션 안전성이 확보된 px.imshow 기반 인터랙션 구현
+            fig_canvas = px.imshow(
+                quantized_small_np,
+                labels=dict(x="가로 격자(칸)", y="세로 격자(칸)"),
+            )
+            
+            # 마우스 hover 툴팁 커스텀 텍스트 주입
+            fig_canvas.update_traces(
+                hoverongaps=False,
+                hovertemplate="%{text}<extra></extra>", 
+                text=text_matrix
+            )
+            
+            # 축 및 그리드 라인 전면 비활성화 (순수 도안 이미지 연출)
+            fig_canvas.update_xaxes(showgrid=False, zeroline=False, showticklabels=False, visible=False)
+            fig_canvas.update_yaxes(showgrid=False, zeroline=False, showticklabels=False, visible=False)
             
             fig_canvas.update_layout(
-                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, autorange="reverse"), # 이미지 상하반전 방지
                 margin=dict(l=0, r=0, b=0, t=0),
                 height=500
             )
