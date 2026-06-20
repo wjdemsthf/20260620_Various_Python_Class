@@ -1,10 +1,8 @@
 import streamlit as st
 import requests
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-API_KEY = os.getenv("RIOT_API_KEY")
+# 로컬(.env)이든 클라우드(Secrets)든 Streamlit이 알아서 키를 찾아옵니다!
+API_KEY = st.secrets["RIOT_API_KEY"]
 
 st.set_page_config(page_title="최근 전적 검색", page_icon="⚔️")
 st.title("⚔️ 최근 전적 조회")
