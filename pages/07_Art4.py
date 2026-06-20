@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 st.title("💎 AI 보석십자수 디자이너: 전수 데이터 시각화 및 압축률 정밀 분석")
-st.markdown("### **정보(군집별 세트 On/Off 필터링, 단계별 압축률) × 미술 융합 수업**")
+st.markdown("### **정보(고대비 디폴트 군집화, 군집별 세트 On/Off, 단계별 압축률) × 미술 융합 수업**")
 st.markdown("---")
 
 # 2. 사이드바 제어 패널
@@ -95,7 +95,7 @@ if uploaded_file is not None:
         ])
         st.markdown(palette_html, unsafe_allow_html=True)
 
-    # --- TAB 2: 데이터 압축 및 수렴 분석 (수직 레이아웃 + 레전드 그룹화) ---
+    # --- TAB 2: 데이터 압축 및 수렴 분석 ---
     with tab2:
         st.markdown("### 📊 정보 교과 정밀 데이터 분석 테이블")
         
@@ -135,21 +135,20 @@ if uploaded_file is not None:
         st.markdown("---")
         
         st.markdown("#### **3️⃣ 3D RGB 색상 공간 전수 데이터 군집화 및 중심점 누적 이동 궤적(Trace) 추적**")
-        st.write("모든 픽셀 정보가 군집 대표 색상으로 통일되어 시각화됩니다. 우측 범례에서 보석 단추를 누르면 해당 색상의 픽셀과 경로가 세트로 꺼집니다.")
-        st.info("💡 **동시 제어 조작 팁:** 특정 보석 단추를 클릭해 On/Off 하면, 3D 공간 상에서 해당 군집의 픽셀 무리 + 이동 경로선 + 다이아몬드가 한꺼번에 연동되어 사라지거나 나타납니다.")
+        st.write("군집 간 경계가 뚜렷이 구분되도록 데이터의 색상을 고대비 디폴트 테마로 자동 지정했습니다.")
+        st.info("💡 우측 범례에서 중심점 제어 버튼을 클릭하면 해당 군집의 픽셀 무리와 경로가 한꺼번에 켜고 꺼집니다.")
         
         fig = go.Figure()
         
-        # 데이터프레임 구성
         df_pixels = pd.DataFrame(pixels, columns=['Red', 'Green', 'Blue'])
-        df_pixels['Cluster_Hex'] = [hex_colors[l] for l in labels_current]
         df_pixels['Cluster_Idx'] = labels_current
         
-        # [수정 포인트] 전수 데이터를 군집별로 나누어 개별 레이어로 등록 (동적 연동 구현)
+        # Plotly의 기본 고대비 팔레트 스트링 사용 (디폴트 컬러가 자동으로 다르게 매핑되도록 처리)
+        # 픽셀 점들의 color 속성에 색상값을 명시하지 않고, 그룹별 자동 할당(디폴트)을 유도합니다.
         for color_idx in range(k_value):
             cluster_pixel_data = df_pixels[df_pixels['Cluster_Idx'] == color_idx]
             
-            # 1. 군집별 픽셀 전수 데이터 레이어 (최하단)
+            # 1. 군집별 픽셀 전수 데이터 (색상을 명시하지 않아 디폴트 컬러맵이 자동 적용됨)
             fig.add_trace(go.Scatter3d(
                 x=cluster_pixel_data['Red'], 
                 y=cluster_pixel_data['Green'], 
@@ -157,17 +156,17 @@ if uploaded_file is not None:
                 mode='markers',
                 marker=dict(
                     size=1.2,
-                    color=hex_colors[color_idx],
                     opacity=0.35
+                    # color 제거 ➔ Plotly 기본 뚜렷한 디폴트 색상 자동 적용
                 ),
-                name=f"보석 {color_idx+1} 픽셀 무리",
-                legendgroup=f"group_{color_idx}", # 동일한 그룹 ID 부여
-                showlegend=False,                 # 범례 창 복잡성 방지를 위해 숨김
+                name=f"보석 {color_idx+1} 영역 픽셀 무리",
+                legendgroup=f"group_{color_idx}",
+                showlegend=False,
                 hoverinfo='text',
-                text=f"보석 {color_idx+1}번 영역 픽셀"
+                text=f"보석 {color_idx+1}번 군집"
             ))
             
-            # 2. 군집별 이동 경로 누적 잔상선 레이어 (중단)
+            # 2. 군집별 이동 경로 누적 잔상선
             trace_r = [step[color_idx][0] for step in all_centroids]
             trace_g = [step[color_idx][1] for step in all_centroids]
             trace_b = [step[color_idx][2] for step in all_centroids]
@@ -176,25 +175,25 @@ if uploaded_file is not None:
                 fig.add_trace(go.Scatter3d(
                     x=trace_r, y=trace_g, z=trace_b,
                     mode='lines+markers',
-                    line=dict(color='#FFFFFF', width=6),
+                    line=dict(color='#FFFFFF', width=6), # 가시성을 위한 흰색 연결선
                     marker=dict(size=3.5, color='#FFD700'),
-                    legendgroup=f"group_{color_idx}", # 동일한 그룹 ID 부여
-                    showlegend=False,                 # 범례 숨김
+                    legendgroup=f"group_{color_idx}",
+                    showlegend=False,
                     name=f"보석 {color_idx+1} 이동 경로"
                 ))
             
-            # 3. 현재 최종 중심점 레이어 (최상단 - 범례 컨트롤러 역할)
+            # 3. 현재 최종 중심점 (★ 이 부분은 실제 보석 색상 유지로 매칭 직관성 확보)
             fig.add_trace(go.Scatter3d(
                 x=[trace_r[-1]], y=[trace_g[-1]], z=[trace_b[-1]],
                 mode='markers',
                 marker=dict(
-                    size=10,                      # 정교한 다이아몬드 크기
+                    size=11, 
                     symbol='diamond', 
-                    color=hex_colors[color_idx], 
-                    line=dict(color='#000000', width=3.5) # 두꺼운 블랙 테두리로 시인성 확보
+                    color=hex_colors[color_idx],          # 보석 팔레트의 실제 색상 유지
+                    line=dict(color='#FFFFFF', width=2) # 다크 템플릿에서 더 잘 보이도록 흰색 테두리로 전환
                 ),
                 name=f"◆ 보석 {color_idx+1} 중심점 제어",
-                legendgroup=f"group_{color_idx}"        # 클릭 시 이 그룹 전체가 동시 On/Off 됨
+                legendgroup=f"group_{color_idx}"
             ))
             
         fig.update_layout(
@@ -208,10 +207,7 @@ if uploaded_file is not None:
             height=750,
             template="plotly_dark",
             legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01,
+                yanchor="top", y=0.99, xanchor="left", x=0.01,
                 font=dict(size=12)
             )
         )
