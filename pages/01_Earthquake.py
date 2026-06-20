@@ -1,9 +1,24 @@
-# -----------------------------------------------------------------------------
+import streamlit as st
+import requests
+import pandas as pd
+import numpy as np
+import datetime
+import plotly.express as px
+from sklearn.linear_model import LinearRegression  # 예측 기능 사용 시 필요
+
+# --- 여기서부터 기존 코드가 시작됩니다 ---
+st.set_page_config(
+    page_title="실시간 지진 트래커 & 교육용 예측기",
+    page_icon="🌋",
+    layout="wide"
+)
+
+st.title("🌋 실시간 지진 모니터링 및 교육용 예측 대시보드")
+st.markdown("---")  # 에러가 났던 지점
+-----------------------------------------------------------------------------
 # [추가 기능] 머신러닝 기반 향후 지진 추세 예측 모듈
 # -----------------------------------------------------------------------------
-from sklearn.linear_model import LinearRegression
 
-st.markdown("---")
 st.subheader("🤖 데이터 과학 기반 향후 지진 추세 예측 (Machine Learning)")
 
 # 시계열 학습을 위해 일자별 지진 발생 횟수 데이터셋 생성
