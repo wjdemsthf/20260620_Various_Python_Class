@@ -127,30 +127,28 @@ if img is not None:
         with col2:
             st.subheader("AI 보석십자수 도안 결과 (마우스 커서를 올려보세요!)")
             
-            # 2차원 도안용 커스텀 텍스트 맵 빌드
+            # 2차원 도안용 레이블 행렬 빌드
             labels_2d = labels_current.reshape(target_height, target_width)
-            text_matrix = []
-            for r in range(target_height):
-                row_text = []
-                for c in range(target_width):
-                    c_idx = labels_2d[r, c]
-                    row_text.append(f"보석 {c_idx+1}번 ({hex_colors[c_idx]})")
-                text_matrix.append(row_text)
+            
+            # 각 칸에 들어갈 안내 문구를 2차원 문자열 배열(Numpy)로 생성
+            hex_matrix = np.array([
+                [f"보석 {labels_2d[r, c]+1}번 ({hex_colors[labels_2d[r, c]]})" for c in range(target_width)]
+                for r in range(target_height)
+            ])
                 
-            # go.Image 대안으로 벨리데이션 안전성이 확보된 px.imshow 기반 인터랙션 구현
+            # px.imshow 구조 내부에 안전하게 텍스트 행렬을 탑승시킵니다.
             fig_canvas = px.imshow(
                 quantized_small_np,
                 labels=dict(x="가로 격자(칸)", y="세로 격자(칸)"),
+                custom_data=[hex_matrix]
             )
             
-            # 마우스 hover 툴팁 커스텀 텍스트 주입
+            # 마우스 hover 시 탑승했던 customdata 배열 값을 툴팁으로 매핑
             fig_canvas.update_traces(
-                hoverongaps=False,
-                hovertemplate="%{text}<extra></extra>", 
-                text=text_matrix
+                hovertemplate="%{customdata[0]}<extra></extra>"
             )
             
-            # 축 및 그리드 라인 전면 비활성화 (순수 도안 이미지 연출)
+            # 불필요한 이미지 주변 눈금선과 그리드 완전 숨김 처리
             fig_canvas.update_xaxes(showgrid=False, zeroline=False, showticklabels=False, visible=False)
             fig_canvas.update_yaxes(showgrid=False, zeroline=False, showticklabels=False, visible=False)
             
