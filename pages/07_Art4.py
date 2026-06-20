@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 st.title("💎 AI 보석십자수 디자이너: 전수 데이터 시각화 및 압축률 정밀 분석")
-st.markdown("### **정보(전수 데이터 시각화, 단계별 예상 압축률, 실제 합산 감소율) × 미술 융합 수업**")
+st.markdown("### **정보(군집별 색상 통일, 중심점 가시성 극대화, 단계별 압축률) × 미술 융합 수업**")
 st.markdown("---")
 
 # 2. 사이드바 제어 패널
@@ -45,7 +45,7 @@ if uploaded_file is not None:
     img_np = np.array(img)
     orig_h, orig_w, _ = img_np.shape
     orig_total_pixels = orig_w * orig_h
-    orig_bytes = orig_total_pixels * 3  # 원본 무압축 바이트 (픽셀당 3바이트)
+    orig_bytes = orig_total_pixels * 3
     
     # 비율 맞춤 세로 칸수 자동 연산
     aspect_ratio = orig_h / orig_w
@@ -55,7 +55,7 @@ if uploaded_file is not None:
     # [1단계 압축 연산: 공간 해상도 감소 (격자화)]
     img_small = img.resize((target_width, target_height), resample=Image.Resampling.BILINEAR)
     small_np = np.array(img_small)
-    pixels = small_np.reshape(-1, 3) # 격자화 후 전수 데이터
+    pixels = small_np.reshape(-1, 3)
     
     # [2단계 압축 연산: K-Means 색상 간소화]
     all_centroids = []
@@ -95,16 +95,14 @@ if uploaded_file is not None:
         ])
         st.markdown(palette_html, unsafe_allow_html=True)
 
-    # --- TAB 2: 데이터 압축 및 수렴 분석 (수직 레이아웃 개편) ---
+    # --- TAB 2: 데이터 압축 및 수렴 분석 (수직 레이아웃) ---
     with tab2:
         st.markdown("### 📊 정보 교과 정밀 데이터 분석 테이블")
         
-        # 압축 비트 및 색상 데이터 계산
         unique_colors_before = len(np.unique(pixels, axis=0))
         bits_needed_before = math.ceil(math.log2(max(2, unique_colors_before)))
         bits_needed_after = math.ceil(math.log2(k_value))
         
-        # [요청사항 반영] 위아래 배치를 위한 수직 정렬 레이아웃 구성
         st.markdown("#### **1️⃣ 변환 전·후 색상 가짓수 및 표현 비트(Bit) 비교**")
         data_comparison = {
             "구분": ["변환 전 (격자화 직후)", "변환 후 (AI 도안 압축)"],
@@ -116,16 +114,10 @@ if uploaded_file is not None:
         
         st.markdown("---")
         
-        # [요청사항 반영 2 & 3] 예상 압축률 및 실제 압축률 정량적 단계별 비교
         st.markdown("#### **2️⃣ 데이터 감소율 및 압축률(Compression Ratio) 심층 비교**")
-        
-        # 가) 공간(픽셀) 감소에 따른 예상 압축률 (색상 압축 제외하고 격자 칸수만 줄었을 때의 크기 대비)
         spatial_compression_ratio = (1 - (target_total_pixels / orig_total_pixels)) * 100
-        
-        # 나) 색상 간소화에 따른 예상 압축률 (격자화된 상태에서 24비트 -> 압축 비트로 색상만 줄였을 때의 크기 대비)
         color_compression_ratio = (1 - (bits_needed_after / 24)) * 100
         
-        # 다) 최종 실제 결합 압축률 (물리적 바이트 크기 비교)
         compressed_bytes = math.ceil((target_total_pixels * bits_needed_after) / 8) + (k_value * 3)
         actual_compression_ratio = (1 - (compressed_bytes / orig_bytes)) * 100
         
@@ -142,58 +134,58 @@ if uploaded_file is not None:
             
         st.markdown("---")
         
-        # [요청사항 반영 1] 전수 데이터 3D 시각화 및 누적 궤적 추적
         st.markdown("#### **3️⃣ 3D RGB 색상 공간 전수 데이터 군집화 및 중심점 누적 이동 궤적(Trace) 추적**")
-        st.write("격자화 처리가 완료된 도안의 모든 픽셀 데이터 정보를 누락 없이 100% 화면에 시각화합니다.")
-        st.info("💡 마우스로 그래프를 드래그하여 회전할 수 있습니다. 큰 다이아몬드(◆) 뒤로 뻗어 있는 흰 선(누적 잔상)을 통해 AI의 학습 누적 경로를 추적해 보세요.")
+        st.write("모든 픽셀 정보가 군집의 대표 색상으로 통일되어 시각화되며, AI 중심점 다이아몬드가 최상위 레이어에 선명하게 드러납니다.")
+        st.info("💡 마우스 드래그로 회전 가능합니다. 흰색 실선 궤적 끝에 선명하게 위치한 다이아몬드(◆)를 관찰하세요.")
         
         fig = go.Figure()
         
-        # 데이터프레임 구성 (전수 조사 배열 데이터화)
+        # 데이터프레임 구성
         df_pixels = pd.DataFrame(pixels, columns=['Red', 'Green', 'Blue'])
-        df_pixels['Hex'] = [f"#{p[0]:02x}{p[1]:02x}{p[2]:02x}" for p in pixels]
-        df_pixels['Cluster'] = [f"군집 {l+1}" for l in labels_current]
+        # 변경포인트 1: 표시되는 색상을 명화 색상이 아닌 '해당 군집의 대표 보석 색상'으로 전수 통일
+        df_pixels['Cluster_Hex'] = [hex_colors[l] for l in labels_current]
+        df_pixels['Cluster_Name'] = [f"군집 {l+1}" for l in labels_current]
         
-        # 변경포인트 1: 전수 데이터를 3D 캔버스에 누락 없이 다 그리기 위해 대용량 가속 엔진(Scatter3d 속 모듈) 활용
+        # 1단계: 배경에 깔리는 픽셀 점들을 먼저 렌더링 (가시성 확보를 위해 매우 작게 설정)
         fig.add_trace(go.Scatter3d(
             x=df_pixels['Red'], y=df_pixels['Green'], z=df_pixels['Blue'],
             mode='markers',
             marker=dict(
-                size=3,               # 가시성을 위한 최적의 크기
-                color=df_pixels['Hex'], # 픽셀 고유의 진짜 색상
-                opacity=0.8
+                size=1.2,                     # 픽셀 점 크기를 줄여 중심점을 가리지 않게 조절
+                color=df_pixels['Cluster_Hex'], # 군집 대표색으로 통일
+                opacity=0.4                   # 투명도를 주어 내부 중심점 궤적이 투과되도록 유도
             ),
-            name="명화 격자화 전수 데이터 픽셀",
+            name="군집화된 픽셀 데이터",
             hoverinfo='text',
-            text=df_pixels['Cluster']
+            text=df_pixels['Cluster_Name']
         ))
             
-        # [데이터 4] K군집화 알고리즘 중심점의 '누적 잔상' 궤적 연산
+        # 2단계: 그 위에 중심점 누적 이동 궤적(선)과 현재 중심점(다이아몬드)을 얹어서 렌더링 (레이아웃 순서상 위로 올라옴)
         for color_idx in range(k_value):
             trace_r = [step[color_idx][0] for step in all_centroids]
             trace_g = [step[color_idx][1] for step in all_centroids]
             trace_b = [step[color_idx][2] for step in all_centroids]
             
-            # 1회차부터 축적된 이동 경로 잔상선 연결
+            # 이동 경로 누적 잔상선 (흰색 튜브 실선)
             if len(trace_r) > 1:
                 fig.add_trace(go.Scatter3d(
                     x=trace_r, y=trace_g, z=trace_b,
                     mode='lines+markers',
-                    line=dict(color='#FFFFFF', width=7), # 중심점 궤적 강조용 흰 선
-                    marker=dict(size=4.5, color='#FFD700'),
+                    line=dict(color='#FFFFFF', width=6),
+                    marker=dict(size=3.5, color='#FFD700'),
                     name=f"보석 {color_idx+1} 이동 경로",
                     showlegend=False
                 ))
             
-            # 현재 선택된 단계의 최종 중심점 위치 (검은 테두리 다이아몬드)
+            # 변경포인트 2: 픽셀에 묻히지 않도록 선명한 대비(검은 테두리 + 밝은 흰색 서브라인 효과) 및 세련된 크기 조절
             fig.add_trace(go.Scatter3d(
                 x=[trace_r[-1]], y=[trace_g[-1]], z=[trace_b[-1]],
                 mode='markers',
                 marker=dict(
-                    size=14, 
+                    size=10,                      # 다이아몬드 크기를 너무 크지 않고 예리하게 살짝 줄임
                     symbol='diamond', 
                     color=hex_colors[color_idx], 
-                    line=dict(color='#000000', width=2.5)
+                    line=dict(color='#000000', width=3.5) # 두꺼운 검은 테두리를 주어 최전방에 확실히 격리되어 보이게 함
                 ),
                 name=f"◆ 보석 {color_idx+1} 현재 중심점"
             ))
@@ -213,4 +205,4 @@ if uploaded_file is not None:
         st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.info("👈 왼쪽 제어 패널에서 명화 이미지를 업로드하시면 전수 데이터 시각화 및 수직 구조 분석기가 작동합니다.")
+    st.info("👈 왼쪽 제어 패널에서 명화 이미지를 업로드하시면 최적화된 3D 대시보드가 활성화됩니다.")
