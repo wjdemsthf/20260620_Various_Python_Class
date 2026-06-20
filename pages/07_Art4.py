@@ -11,7 +11,6 @@ from io import BytesIO
 # ----------------------------------------------------------------
 # 🌟 [선생님 설정 구역] 🌟
 # 선생님의 깃허브 계정명과 저장소(레포지토리) 이름을 정확하게 적어주세요.
-# 예: GITHUB_USERNAME = "jeong-deunsol", GITHUB_REPO = "ai-mosaic-class"
 # ----------------------------------------------------------------
 GITHUB_USERNAME = "YOUR_GITHUB_USERNAME" 
 GITHUB_REPO = "YOUR_REPO_NAME"
@@ -31,7 +30,6 @@ st.markdown("---")
 # 2. 사이드바 제어 패널
 st.sidebar.header("⚙️ 도안 제작 및 알고리즘 제어")
 
-# 🌟 변경포인트 1: 선생님이 올려주신 파일명으로 셀렉트박스 변경
 sample_option = st.sidebar.selectbox(
     "1. 실험할 명화 선택",
     ["직접 파일 업로드하기", "고흐 - 별이 빛나는 밤", "뭉크 - 절규"]
@@ -60,16 +58,16 @@ max_iter_value = st.sidebar.slider(
     help="숫자를 늘릴수록 3D 그래프에 누적 잔상(꼬리선)이 길게 그려집니다."
 )
 
-# 🌟 변경포인트 2: 깃허브 Raw 주소에서 이미지 로드하는 함수
+# 🌟 방법 1: pages/ 하위 폴더 경로에 구애받지 않는 절대 주소형 깃허브 로더 함수
 def load_image_from_github(file_name):
-    # 깃허브에 올린 파일의 실제 다운로드(Raw) 주소 구조 생성
+    # main/ 바로 뒤에 sample_images/를 고정하여 상대 경로 문제를 원천 차단합니다.
     url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/main/sample_images/{file_name}"
     try:
         response = requests.get(url)
         if response.status_code == 200:
             return Image.open(BytesIO(response.content)).convert("RGB")
         else:
-            st.sidebar.error(f"❌ 깃허브에서 이미지를 찾을 수 없습니다. (상단의 GITHUB 설정을 확인해주세요.)")
+            st.sidebar.error(f"❌ 파일을 찾을 수 없습니다.\n요청 주소: {url}")
             return None
     except Exception as e:
         st.sidebar.error(f"이미지 로드 중 오류 발생: {e}")
@@ -83,9 +81,9 @@ if sample_option == "직접 파일 업로드하기":
     if uploaded_file is not None:
         img = Image.open(uploaded_file).convert("RGB")
 elif sample_option == "고흐 - 별이 빛나는 밤":
-    img = load_image_from_github("Starry_Night.jpg")  # 선생님 파일명 반영
+    img = load_image_from_github("Starry_Night.jpg")
 elif sample_option == "뭉크 - 절규":
-    img = load_image_from_github("The_Scream.jpg")   # 선생님 파일명 반영
+    img = load_image_from_github("The_Scream.jpg")
 
 # 3. 메인 로직 작동
 if img is not None:
