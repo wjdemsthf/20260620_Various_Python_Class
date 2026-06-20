@@ -12,8 +12,8 @@ from io import BytesIO
 # 🌟 [선생님 설정 구역] 🌟
 # 선생님의 깃허브 계정명과 저장소(레포지토리) 이름을 정확하게 적어주세요.
 # ----------------------------------------------------------------
-GITHUB_USERNAME = "YOUR_GITHUB_USERNAME" 
-GITHUB_REPO = "YOUR_REPO_NAME"
+GITHUB_USERNAME = "wjdemsthf" 
+GITHUB_REPO = "20260620_Various_Python_Class"
 # ----------------------------------------------------------------
 
 # 1. 페이지 기본 설정
