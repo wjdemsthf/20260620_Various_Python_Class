@@ -8,6 +8,15 @@ import math
 import requests
 from io import BytesIO
 
+# ----------------------------------------------------------------
+# 🌟 [선생님 설정 구역] 🌟
+# 선생님의 깃허브 계정명과 저장소(레포지토리) 이름을 정확하게 적어주세요.
+# 예: GITHUB_USERNAME = "jeong-deunsol", GITHUB_REPO = "ai-mosaic-class"
+# ----------------------------------------------------------------
+GITHUB_USERNAME = "YOUR_GITHUB_USERNAME" 
+GITHUB_REPO = "YOUR_REPO_NAME"
+# ----------------------------------------------------------------
+
 # 1. 페이지 기본 설정
 st.set_page_config(
     page_title="AI 보석십자수 & 압축 마스터",
@@ -22,13 +31,13 @@ st.markdown("---")
 # 2. 사이드바 제어 패널
 st.sidebar.header("⚙️ 도안 제작 및 알고리즘 제어")
 
-# 🌟 변경포인트: 샘플 이미지 선택 기능 강화
+# 🌟 변경포인트 1: 선생님이 올려주신 파일명으로 셀렉트박스 변경
 sample_option = st.sidebar.selectbox(
     "1. 실험할 명화 선택",
-    ["직접 파일 업로드하기", "고흐 - 별이 빛나는 밤", "모네 - 양산 든 여인", "신윤복 - 미인도"]
+    ["직접 파일 업로드하기", "고흐 - 별이 빛나는 밤", "뭉크 - 절규"]
 )
 
-# 파일 업로더는 '직접 파일 업로드하기'를 선택했을 때만 화면에 표시되도록 제어
+# 파일 업로더 제어
 uploaded_file = None
 if sample_option == "직접 파일 업로드하기":
     uploaded_file = st.sidebar.file_uploader("명화 이미지 업로드 (JPG, PNG)", type=["jpg", "jpeg", "png"])
@@ -51,31 +60,32 @@ max_iter_value = st.sidebar.slider(
     help="숫자를 늘릴수록 3D 그래프에 누적 잔상(꼬리선)이 길게 그려집니다."
 )
 
-# 🌟 변경포인트 2: GitHub Raw URL에서 이미지 로드하는 함수 정의
-# 선생님의 GitHub username과 repository 이름에 맞게 아래 주소를 수정하시면 편리합니다.
-# 현재는 쌤이 바로 테스트해보실 수 있도록 범용적인 오픈 이미지 주소(Picsum)로 샘플 매핑해 두었습니다.
-def load_image_from_url(url):
+# 🌟 변경포인트 2: 깃허브 Raw 주소에서 이미지 로드하는 함수
+def load_image_from_github(file_name):
+    # 깃허브에 올린 파일의 실제 다운로드(Raw) 주소 구조 생성
+    url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/main/sample_images/{file_name}"
     try:
         response = requests.get(url)
-        return Image.open(BytesIO(response.content)).convert("RGB")
+        if response.status_code == 200:
+            return Image.open(BytesIO(response.content)).convert("RGB")
+        else:
+            st.sidebar.error(f"❌ 깃허브에서 이미지를 찾을 수 없습니다. (상단의 GITHUB 설정을 확인해주세요.)")
+            return None
     except Exception as e:
-        st.error(f"이미지를 불러오는 중 오류가 발생했습니다: {e}")
+        st.sidebar.error(f"이미지 로드 중 오류 발생: {e}")
         return None
 
 # 이미지 객체 초기화
 img = None
 
-# 선택지에 따른 동적 이미지 로딩
+# 선택지에 따른 파일명 매핑 및 로딩
 if sample_option == "직접 파일 업로드하기":
     if uploaded_file is not None:
         img = Image.open(uploaded_file).convert("RGB")
 elif sample_option == "고흐 - 별이 빛나는 밤":
-    # 쌤 저장소 주소 예시: f"https://raw.githubusercontent.com/{유저네임}/{저장소명}/main/sample_images/starry.jpg"
-    img = load_image_from_url("https://picsum.photos/id/1025/600/400") # 테스트용 샘플 아티팩트 주소
-elif sample_option == "모네 - 양산 든 여인":
-    img = load_image_from_url("https://picsum.photos/id/1043/600/450")
-elif sample_option == "신윤복 - 미인도":
-    img = load_image_from_url("https://picsum.photos/id/1062/400/600")
+    img = load_image_from_github("Starry_Night.jpg")  # 선생님 파일명 반영
+elif sample_option == "뭉크 - 절규":
+    img = load_image_from_github("The_Scream.jpg")   # 선생님 파일명 반영
 
 # 3. 메인 로직 작동
 if img is not None:
@@ -172,7 +182,8 @@ if img is not None:
         st.markdown("---")
         
         st.markdown("#### **3️⃣ 3D RGB 색상 공간 전수 데이터 군집화 및 중심점 누적 이동 궤적(Trace) 추적**")
-        st.write("우측 범례에서 보석 단추를 누르면 해당 색상의 픽셀과 경로가 세트로 켜고 꺼집니다.")
+        st.write("군집 간 경계가 뚜렷이 구분되도록 데이터의 색상을 고대비 디폴트 테마로 자동 지정했습니다.")
+        st.info("💡 우측 범례에서 중심점 제어 버튼을 클릭하면 해당 군집의 픽셀 무리와 경로가 한꺼번에 켜고 꺼집니다.")
         
         fig = go.Figure()
         df_pixels = pd.DataFrame(pixels, columns=['Red', 'Green', 'Blue'])
@@ -228,11 +239,11 @@ if img is not None:
                 zaxis=dict(title='Blue (0-255)', range=[0, 255], backgroundcolor="rgb(35, 35, 35)", gridcolor="gray"),
                 aspectmode='cube'
             ),
-            margin=dict(l=0, r=0, b=0, t=0), height=750, template="plotly_dark",
+            margin=dict(l=0, r=0, b=0, t=0),
+            height=750, template="plotly_dark",
             legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, font=dict(size=12))
         )
         st.plotly_chart(fig, use_container_width=True)
 
 else:
-    # 🌟 변경포인트 3: 초기 안내 메시지 다듬기
     st.info("👈 왼쪽 제어 패널에서 명화 샘플을 선택하거나 직접 파일을 업로드하시면 인터랙티브 대시보드가 즉시 실행됩니다!")
