@@ -5,6 +5,8 @@ from PIL import Image
 from sklearn.cluster import KMeans
 import plotly.graph_objects as go
 import math
+import requests
+from io import BytesIO
 
 # 1. 페이지 기본 설정
 st.set_page_config(
@@ -19,7 +21,17 @@ st.markdown("---")
 
 # 2. 사이드바 제어 패널
 st.sidebar.header("⚙️ 도안 제작 및 알고리즘 제어")
-uploaded_file = st.sidebar.file_uploader("1. 명화 이미지 업로드 (JPG, PNG)", type=["jpg", "jpeg", "png"])
+
+# 🌟 변경포인트: 샘플 이미지 선택 기능 강화
+sample_option = st.sidebar.selectbox(
+    "1. 실험할 명화 선택",
+    ["직접 파일 업로드하기", "고흐 - 별이 빛나는 밤", "모네 - 양산 든 여인", "신윤복 - 미인도"]
+)
+
+# 파일 업로더는 '직접 파일 업로드하기'를 선택했을 때만 화면에 표시되도록 제어
+uploaded_file = None
+if sample_option == "직접 파일 업로드하기":
+    uploaded_file = st.sidebar.file_uploader("명화 이미지 업로드 (JPG, PNG)", type=["jpg", "jpeg", "png"])
 
 target_width = st.sidebar.number_input(
     "2. 도안의 가로 보석 개수 (가로 칸수)",
@@ -30,18 +42,43 @@ target_width = st.sidebar.number_input(
 k_value = st.sidebar.slider(
     "3. 사용할 보석 색상 수 (k값)",
     min_value=2, max_value=64, value=6,
-    help="AI가 추출할 대표 보석 색상의 가짓수입니다. (최대 64개)"
+    help="AI가 추출할 대표 보석 색상의 가짓수입니다."
 )
 
 max_iter_value = st.sidebar.slider(
     "4. AI 알고리즘 반복 횟수 (Learning Steps)",
     min_value=1, max_value=15, value=3, step=1,
-    help="숫자를 늘릴수록 3D 그래프에 1회차부터 현재 회차까지 이동한 '누적 잔상(꼬리선)'이 길게 그려집니다."
+    help="숫자를 늘릴수록 3D 그래프에 누적 잔상(꼬리선)이 길게 그려집니다."
 )
 
-if uploaded_file is not None:
-    # [원본 데이터 수집]
-    img = Image.open(uploaded_file).convert("RGB")
+# 🌟 변경포인트 2: GitHub Raw URL에서 이미지 로드하는 함수 정의
+# 선생님의 GitHub username과 repository 이름에 맞게 아래 주소를 수정하시면 편리합니다.
+# 현재는 쌤이 바로 테스트해보실 수 있도록 범용적인 오픈 이미지 주소(Picsum)로 샘플 매핑해 두었습니다.
+def load_image_from_url(url):
+    try:
+        response = requests.get(url)
+        return Image.open(BytesIO(response.content)).convert("RGB")
+    except Exception as e:
+        st.error(f"이미지를 불러오는 중 오류가 발생했습니다: {e}")
+        return None
+
+# 이미지 객체 초기화
+img = None
+
+# 선택지에 따른 동적 이미지 로딩
+if sample_option == "직접 파일 업로드하기":
+    if uploaded_file is not None:
+        img = Image.open(uploaded_file).convert("RGB")
+elif sample_option == "고흐 - 별이 빛나는 밤":
+    # 쌤 저장소 주소 예시: f"https://raw.githubusercontent.com/{유저네임}/{저장소명}/main/sample_images/starry.jpg"
+    img = load_image_from_url("https://picsum.photos/id/1025/600/400") # 테스트용 샘플 아티팩트 주소
+elif sample_option == "모네 - 양산 든 여인":
+    img = load_image_from_url("https://picsum.photos/id/1043/600/450")
+elif sample_option == "신윤복 - 미인도":
+    img = load_image_from_url("https://picsum.photos/id/1062/400/600")
+
+# 3. 메인 로직 작동
+if img is not None:
     img_np = np.array(img)
     orig_h, orig_w, _ = img_np.shape
     orig_total_pixels = orig_w * orig_h
@@ -135,30 +172,20 @@ if uploaded_file is not None:
         st.markdown("---")
         
         st.markdown("#### **3️⃣ 3D RGB 색상 공간 전수 데이터 군집화 및 중심점 누적 이동 궤적(Trace) 추적**")
-        st.write("군집 간 경계가 뚜렷이 구분되도록 데이터의 색상을 고대비 디폴트 테마로 자동 지정했습니다.")
-        st.info("💡 우측 범례에서 중심점 제어 버튼을 클릭하면 해당 군집의 픽셀 무리와 경로가 한꺼번에 켜고 꺼집니다.")
+        st.write("우측 범례에서 보석 단추를 누르면 해당 색상의 픽셀과 경로가 세트로 켜고 꺼집니다.")
         
         fig = go.Figure()
-        
         df_pixels = pd.DataFrame(pixels, columns=['Red', 'Green', 'Blue'])
         df_pixels['Cluster_Idx'] = labels_current
         
-        # Plotly의 기본 고대비 팔레트 스트링 사용 (디폴트 컬러가 자동으로 다르게 매핑되도록 처리)
-        # 픽셀 점들의 color 속성에 색상값을 명시하지 않고, 그룹별 자동 할당(디폴트)을 유도합니다.
         for color_idx in range(k_value):
             cluster_pixel_data = df_pixels[df_pixels['Cluster_Idx'] == color_idx]
             
-            # 1. 군집별 픽셀 전수 데이터 (색상을 명시하지 않아 디폴트 컬러맵이 자동 적용됨)
+            # 1. 군집별 픽셀 전수 데이터 (디폴트 고대비 컬러 자동 지정)
             fig.add_trace(go.Scatter3d(
-                x=cluster_pixel_data['Red'], 
-                y=cluster_pixel_data['Green'], 
-                z=cluster_pixel_data['Blue'],
+                x=cluster_pixel_data['Red'], y=cluster_pixel_data['Green'], z=cluster_pixel_data['Blue'],
                 mode='markers',
-                marker=dict(
-                    size=1.2,
-                    opacity=0.35
-                    # color 제거 ➔ Plotly 기본 뚜렷한 디폴트 색상 자동 적용
-                ),
+                marker=dict(size=1.2, opacity=0.35),
                 name=f"보석 {color_idx+1} 영역 픽셀 무리",
                 legendgroup=f"group_{color_idx}",
                 showlegend=False,
@@ -175,22 +202,20 @@ if uploaded_file is not None:
                 fig.add_trace(go.Scatter3d(
                     x=trace_r, y=trace_g, z=trace_b,
                     mode='lines+markers',
-                    line=dict(color='#FFFFFF', width=6), # 가시성을 위한 흰색 연결선
+                    line=dict(color='#FFFFFF', width=6),
                     marker=dict(size=3.5, color='#FFD700'),
                     legendgroup=f"group_{color_idx}",
                     showlegend=False,
                     name=f"보석 {color_idx+1} 이동 경로"
                 ))
             
-            # 3. 현재 최종 중심점 (★ 이 부분은 실제 보석 색상 유지로 매칭 직관성 확보)
+            # 3. 현재 최종 중심점 (실제 보석 색상 칩 매핑 + 흰 테두리)
             fig.add_trace(go.Scatter3d(
                 x=[trace_r[-1]], y=[trace_g[-1]], z=[trace_b[-1]],
                 mode='markers',
                 marker=dict(
-                    size=11, 
-                    symbol='diamond', 
-                    color=hex_colors[color_idx],          # 보석 팔레트의 실제 색상 유지
-                    line=dict(color='#FFFFFF', width=2) # 다크 템플릿에서 더 잘 보이도록 흰색 테두리로 전환
+                    size=11, symbol='diamond', color=hex_colors[color_idx], 
+                    line=dict(color='#FFFFFF', width=2)
                 ),
                 name=f"◆ 보석 {color_idx+1} 중심점 제어",
                 legendgroup=f"group_{color_idx}"
@@ -203,16 +228,11 @@ if uploaded_file is not None:
                 zaxis=dict(title='Blue (0-255)', range=[0, 255], backgroundcolor="rgb(35, 35, 35)", gridcolor="gray"),
                 aspectmode='cube'
             ),
-            margin=dict(l=0, r=0, b=0, t=0),
-            height=750,
-            template="plotly_dark",
-            legend=dict(
-                yanchor="top", y=0.99, xanchor="left", x=0.01,
-                font=dict(size=12)
-            )
+            margin=dict(l=0, r=0, b=0, t=0), height=750, template="plotly_dark",
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01, font=dict(size=12))
         )
-        
         st.plotly_chart(fig, use_container_width=True)
 
 else:
-    st.info("👈 왼쪽 제어 패널에서 명화 이미지를 업로드하시면 최적화된 3D 대시보드가 활성화됩니다.")
+    # 🌟 변경포인트 3: 초기 안내 메시지 다듬기
+    st.info("👈 왼쪽 제어 패널에서 명화 샘플을 선택하거나 직접 파일을 업로드하시면 인터랙티브 대시보드가 즉시 실행됩니다!")
