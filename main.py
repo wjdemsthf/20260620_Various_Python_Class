@@ -1,9 +1,7 @@
 import streamlit as st
-import os
-from dotenv import load_dotenv
 
-load_dotenv() # .env 파일 로드
-api_key = os.getenv("RIOT_API_KEY")
+# Secrets에 등록된 모든 키의 이름을 화면에 출력 (값은 숨김)
+st.write("현재 등록된 시크릿 키 목록:", list(st.secrets.keys()))
 
 # 1. 페이지 기본 설정 (가장 상단에 위치해야 합니다)
 st.set_page_config(
