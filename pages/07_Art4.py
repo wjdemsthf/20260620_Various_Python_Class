@@ -12,8 +12,8 @@ from io import BytesIO
 # 🌟 [선생님 설정 구역] 🌟
 # 선생님의 깃허브 계정명과 저장소(레포지토리) 이름을 정확하게 적어주세요.
 # ----------------------------------------------------------------
-GITHUB_USERNAME = "wjdemsthf" 
-GITHUB_REPO = "20260620_Various_Python_Class"
+GITHUB_USERNAME = "YOUR_GITHUB_USERNAME" 
+GITHUB_REPO = "YOUR_REPO_NAME"
 # ----------------------------------------------------------------
 
 # 1. 페이지 기본 설정
@@ -24,7 +24,7 @@ st.set_page_config(
 )
 
 st.title("💎 AI 보석십자수 디자이너: 전수 데이터 시각화 및 압축률 정밀 분석")
-st.markdown("### **정보(고대비 디폴트 군집화, 군집별 세트 On/Off, 단계별 압축률) × 미술 융합 수업**")
+st.markdown("### **정보(도안 내 보석 색상 툴팁 확인, 군집별 세트 On/Off, 단계별 압축률) × 미술 융합 수업**")
 st.markdown("---")
 
 # 2. 사이드바 제어 패널
@@ -58,9 +58,7 @@ max_iter_value = st.sidebar.slider(
     help="숫자를 늘릴수록 3D 그래프에 누적 잔상(꼬리선)이 길게 그려집니다."
 )
 
-# 🌟 방법 1: pages/ 하위 폴더 경로에 구애받지 않는 절대 주소형 깃허브 로더 함수
 def load_image_from_github(file_name):
-    # main/ 바로 뒤에 sample_images/를 고정하여 상대 경로 문제를 원천 차단합니다.
     url = f"https://raw.githubusercontent.com/{GITHUB_USERNAME}/{GITHUB_REPO}/main/sample_images/{file_name}"
     try:
         response = requests.get(url)
@@ -76,7 +74,6 @@ def load_image_from_github(file_name):
 # 이미지 객체 초기화
 img = None
 
-# 선택지에 따른 파일명 매핑 및 로딩
 if sample_option == "직접 파일 업로드하기":
     if uploaded_file is not None:
         img = Image.open(uploaded_file).convert("RGB")
@@ -112,10 +109,9 @@ if img is not None:
             labels_current = km.labels_
             centroids_current = km.cluster_centers_
 
-    # 도안 이미지 생성 및 확대 복원
+    # 도안 이미지 데이터 매핑 레이어 준비
     quantized_pixels = centroids_current[labels_current]
     quantized_small_np = quantized_pixels.reshape(target_height, target_width, 3).astype(np.uint8)
-    output_img = Image.fromarray(quantized_small_np).resize((orig_w, orig_h), resample=Image.Resampling.NEAREST)
     hex_colors = [f"#{int(c[0]):02x}{int(c[1]):02x}{int(c[2]):02x}" for c in centroids_current]
     
     # 탭 구현
@@ -128,8 +124,34 @@ if img is not None:
             st.subheader("원본 명화 이미지")
             st.image(img, use_container_width=True)
         with col2:
-            st.subheader("AI 보석십자수 도안 결과")
-            st.image(output_img, use_container_width=True)
+            st.subheader("AI 보석십자수 도안 결과 (마우스 커서를 올려보세요!)")
+            
+            # 🌟 변경포인트: 2D 도안 이미지에 마우스 오버 시 #FFFFFF 코드가 뜨도록 Plotly 차트 인터랙션 처리
+            # 각 픽셀 칸에 매핑될 Hex 코드 텍스트 2차원 배열 빌드
+            labels_2d = labels_current.reshape(target_height, target_width)
+            text_matrix = []
+            for r in range(target_height):
+                row_text = []
+                for c in range(target_width):
+                    c_idx = labels_2d[r, c]
+                    row_text.append(f"좌표: ({c}, {r})<br>보석 번호: {c_idx+1}번<br>색상 코드: {hex_colors[c_idx]}")
+                text_matrix.append(row_text)
+                
+            # 이미지 배열을 Plotly go.Image 인터페이스에 맞게 정돈
+            fig_canvas = go.Figure(go.Image(
+                z=quantized_small_np,
+                text=text_matrix,
+                hoverinfo="text" # 오직 우리가 매핑한 텍스트 툴팁만 팝업 유도
+            ))
+            
+            fig_canvas.update_layout(
+                xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, autorange="reverse"), # 이미지 상하반전 방지
+                margin=dict(l=0, r=0, b=0, t=0),
+                height=500
+            )
+            st.plotly_chart(fig_canvas, use_container_width=True)
+            
             st.success(f"📐 비율 자동 연산: 가로 {target_width}칸 × 세로 {target_height}칸 (총 {target_total_pixels:,}개 보석)")
 
         st.markdown("---")
