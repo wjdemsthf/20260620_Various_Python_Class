@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 st.title("💎 AI 보석십자수 디자이너: 전수 데이터 시각화 및 압축률 정밀 분석")
-st.markdown("### **정보(군집별 색상 통일, 중심점 가시성 극대화, 단계별 압축률) × 미술 융합 수업**")
+st.markdown("### **정보(군집별 세트 On/Off 필터링, 단계별 압축률) × 미술 융합 수업**")
 st.markdown("---")
 
 # 2. 사이드바 제어 패널
@@ -95,7 +95,7 @@ if uploaded_file is not None:
         ])
         st.markdown(palette_html, unsafe_allow_html=True)
 
-    # --- TAB 2: 데이터 압축 및 수렴 분석 (수직 레이아웃) ---
+    # --- TAB 2: 데이터 압축 및 수렴 분석 (수직 레이아웃 + 레전드 그룹화) ---
     with tab2:
         st.markdown("### 📊 정보 교과 정밀 데이터 분석 테이블")
         
@@ -135,59 +135,66 @@ if uploaded_file is not None:
         st.markdown("---")
         
         st.markdown("#### **3️⃣ 3D RGB 색상 공간 전수 데이터 군집화 및 중심점 누적 이동 궤적(Trace) 추적**")
-        st.write("모든 픽셀 정보가 군집의 대표 색상으로 통일되어 시각화되며, AI 중심점 다이아몬드가 최상위 레이어에 선명하게 드러납니다.")
-        st.info("💡 마우스 드래그로 회전 가능합니다. 흰색 실선 궤적 끝에 선명하게 위치한 다이아몬드(◆)를 관찰하세요.")
+        st.write("모든 픽셀 정보가 군집 대표 색상으로 통일되어 시각화됩니다. 우측 범례에서 보석 단추를 누르면 해당 색상의 픽셀과 경로가 세트로 꺼집니다.")
+        st.info("💡 **동시 제어 조작 팁:** 특정 보석 단추를 클릭해 On/Off 하면, 3D 공간 상에서 해당 군집의 픽셀 무리 + 이동 경로선 + 다이아몬드가 한꺼번에 연동되어 사라지거나 나타납니다.")
         
         fig = go.Figure()
         
         # 데이터프레임 구성
         df_pixels = pd.DataFrame(pixels, columns=['Red', 'Green', 'Blue'])
-        # 변경포인트 1: 표시되는 색상을 명화 색상이 아닌 '해당 군집의 대표 보석 색상'으로 전수 통일
         df_pixels['Cluster_Hex'] = [hex_colors[l] for l in labels_current]
-        df_pixels['Cluster_Name'] = [f"군집 {l+1}" for l in labels_current]
+        df_pixels['Cluster_Idx'] = labels_current
         
-        # 1단계: 배경에 깔리는 픽셀 점들을 먼저 렌더링 (가시성 확보를 위해 매우 작게 설정)
-        fig.add_trace(go.Scatter3d(
-            x=df_pixels['Red'], y=df_pixels['Green'], z=df_pixels['Blue'],
-            mode='markers',
-            marker=dict(
-                size=1.2,                     # 픽셀 점 크기를 줄여 중심점을 가리지 않게 조절
-                color=df_pixels['Cluster_Hex'], # 군집 대표색으로 통일
-                opacity=0.4                   # 투명도를 주어 내부 중심점 궤적이 투과되도록 유도
-            ),
-            name="군집화된 픽셀 데이터",
-            hoverinfo='text',
-            text=df_pixels['Cluster_Name']
-        ))
-            
-        # 2단계: 그 위에 중심점 누적 이동 궤적(선)과 현재 중심점(다이아몬드)을 얹어서 렌더링 (레이아웃 순서상 위로 올라옴)
+        # [수정 포인트] 전수 데이터를 군집별로 나누어 개별 레이어로 등록 (동적 연동 구현)
         for color_idx in range(k_value):
+            cluster_pixel_data = df_pixels[df_pixels['Cluster_Idx'] == color_idx]
+            
+            # 1. 군집별 픽셀 전수 데이터 레이어 (최하단)
+            fig.add_trace(go.Scatter3d(
+                x=cluster_pixel_data['Red'], 
+                y=cluster_pixel_data['Green'], 
+                z=cluster_pixel_data['Blue'],
+                mode='markers',
+                marker=dict(
+                    size=1.2,
+                    color=hex_colors[color_idx],
+                    opacity=0.35
+                ),
+                name=f"보석 {color_idx+1} 픽셀 무리",
+                legendgroup=f"group_{color_idx}", # 동일한 그룹 ID 부여
+                showlegend=False,                 # 범례 창 복잡성 방지를 위해 숨김
+                hoverinfo='text',
+                text=f"보석 {color_idx+1}번 영역 픽셀"
+            ))
+            
+            # 2. 군집별 이동 경로 누적 잔상선 레이어 (중단)
             trace_r = [step[color_idx][0] for step in all_centroids]
             trace_g = [step[color_idx][1] for step in all_centroids]
             trace_b = [step[color_idx][2] for step in all_centroids]
             
-            # 이동 경로 누적 잔상선 (흰색 튜브 실선)
             if len(trace_r) > 1:
                 fig.add_trace(go.Scatter3d(
                     x=trace_r, y=trace_g, z=trace_b,
                     mode='lines+markers',
                     line=dict(color='#FFFFFF', width=6),
                     marker=dict(size=3.5, color='#FFD700'),
-                    name=f"보석 {color_idx+1} 이동 경로",
-                    showlegend=False
+                    legendgroup=f"group_{color_idx}", # 동일한 그룹 ID 부여
+                    showlegend=False,                 # 범례 숨김
+                    name=f"보석 {color_idx+1} 이동 경로"
                 ))
             
-            # 변경포인트 2: 픽셀에 묻히지 않도록 선명한 대비(검은 테두리 + 밝은 흰색 서브라인 효과) 및 세련된 크기 조절
+            # 3. 현재 최종 중심점 레이어 (최상단 - 범례 컨트롤러 역할)
             fig.add_trace(go.Scatter3d(
                 x=[trace_r[-1]], y=[trace_g[-1]], z=[trace_b[-1]],
                 mode='markers',
                 marker=dict(
-                    size=10,                      # 다이아몬드 크기를 너무 크지 않고 예리하게 살짝 줄임
+                    size=10,                      # 정교한 다이아몬드 크기
                     symbol='diamond', 
                     color=hex_colors[color_idx], 
-                    line=dict(color='#000000', width=3.5) # 두꺼운 검은 테두리를 주어 최전방에 확실히 격리되어 보이게 함
+                    line=dict(color='#000000', width=3.5) # 두꺼운 블랙 테두리로 시인성 확보
                 ),
-                name=f"◆ 보석 {color_idx+1} 현재 중심점"
+                name=f"◆ 보석 {color_idx+1} 중심점 제어",
+                legendgroup=f"group_{color_idx}"        # 클릭 시 이 그룹 전체가 동시 On/Off 됨
             ))
             
         fig.update_layout(
@@ -199,7 +206,14 @@ if uploaded_file is not None:
             ),
             margin=dict(l=0, r=0, b=0, t=0),
             height=750,
-            template="plotly_dark"
+            template="plotly_dark",
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01,
+                font=dict(size=12)
+            )
         )
         
         st.plotly_chart(fig, use_container_width=True)
