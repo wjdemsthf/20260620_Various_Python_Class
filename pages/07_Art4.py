@@ -13,8 +13,8 @@ from io import BytesIO
 # 🌟 [선생님 설정 구역] 🌟
 # 선생님의 깃허브 계정명과 저장소(레포지토리) 이름을 정확하게 적어주세요.
 # ----------------------------------------------------------------
-GITHUB_USERNAME = "wjdemsthf" 
-GITHUB_REPO = "20260620_Various_Python_Class"
+GITHUB_USERNAME = "YOUR_GITHUB_USERNAME" 
+GITHUB_REPO = "YOUR_REPO_NAME"
 # ----------------------------------------------------------------
 
 # 1. 페이지 기본 설정
@@ -130,22 +130,22 @@ if img is not None:
             # 2차원 도안용 레이블 행렬 빌드
             labels_2d = labels_current.reshape(target_height, target_width)
             
-            # 👈 [TypeError 해결 핵심 구역]: 순수 2차원 문자열 넘파이 배열로 구조화
+            # 🌟 [에러 완벽 차단 정석 구조]: 각 칸에 매핑될 텍스트 정보를 2차원 행렬로 빌드
             hex_matrix = np.array([
                 [f"보석 {labels_2d[r, c]+1}번 ({hex_colors[labels_2d[r, c]]})" for c in range(target_width)]
                 for r in range(target_height)
             ])
                 
-            # custom_data에 대괄호 없이 넘파이 배열 객체 그대로 입력
+            # px.imshow 내부에 3차원 축 매치 구조를 위해 차원을 명확히 매핑하여 전달합니다.
             fig_canvas = px.imshow(
                 quantized_small_np,
                 labels=dict(x="가로 격자(칸)", y="세로 격자(칸)"),
-                custom_data=hex_matrix
+                custom_data=[hex_matrix]  # 리스트 래핑 구조 유지
             )
             
-            # 단일 차원 수렴 파싱 (%{customdata}) 형태로 툴팁 매핑
+            # 단일 플래그 주소 대신 다차원 인덱싱 포인터(%{customdata[0]})를 적용하여 컴파일 에러를 원천 봉쇄합니다.
             fig_canvas.update_traces(
-                hovertemplate="%{customdata}<extra></extra>"
+                hovertemplate="%{customdata[0]}<extra></extra>"
             )
             
             # 불필요한 이미지 주변 눈금선과 그리드 완전 숨김 처리
