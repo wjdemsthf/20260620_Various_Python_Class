@@ -3,19 +3,18 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from sklearn.cluster import KMeans
-import plotly.express as px
 import plotly.graph_objects as go
 import math
 
 # 1. 페이지 기본 설정
 st.set_page_config(
-    page_title="AI 보석십자수 & 압축 분석기",
+    page_title="AI 보석십자수 & 궤적 추적기",
     page_icon="💎",
     layout="wide"
 )
 
-st.title("💎 AI 보석십자수 디자이너: 데이터 압축 및 중심점 궤적 분석")
-st.markdown("### **정보(k-평균 군집화 궤적, 색상 비트, 실제 감소율) × 미술(보석십자수 도안) 융합 수업**")
+st.title("💎 AI 보석십자수 디자이너: 알고리즘 누적 궤적 분석")
+st.markdown("### **정보(k-평균 군집화 누적 잔상, 색상 비트, 실제 감소율) × 미술(보석십자수 도안) 융합 수업**")
 st.markdown("---")
 
 # 2. 사이드바 제어 패널
@@ -36,8 +35,8 @@ k_value = st.sidebar.slider(
 
 max_iter_value = st.sidebar.slider(
     "4. AI 알고리즘 반복 횟수 (Learning Steps)",
-    min_value=1, max_value=15, value=1, step=1,
-    help="1부터 시작해서 숫자를 천천히 늘려보세요! 중심점(◆)이 이동하며 도안과 그래프가 정교해집니다."
+    min_value=1, max_value=15, value=3, step=1,
+    help="숫자를 늘릴수록 3D 그래프에 1회차부터 현재 회차까지 이동한 '누적 잔상(꼬리선)'이 길게 그려집니다."
 )
 
 if uploaded_file is not None:
@@ -54,20 +53,20 @@ if uploaded_file is not None:
     small_np = np.array(img_small)
     pixels = small_np.reshape(-1, 3)
     
-    # --- 핵심 알고리즘 연산 (K-Means) ---
-    # 현재 단계(max_iter)의 중심점과 라벨 계산
-    kmeans_current = KMeans(n_clusters=k_value, init='random', max_iter=max_iter_value, n_init=1, random_state=42)
-    kmeans_current.fit(pixels)
-    labels_current = kmeans_current.labels_
-    centroids_current = kmeans_current.cluster_centers_
+    # --- [핵심 알고리즘 연산] 단계별 중심점 누적 추적 ---
+    # 1회차부터 현재 선택된 max_iter까지의 모든 중심점 위치를 기록할 리스트 배열
+    # K-Means의 random_state와 init을 일치시켜 회차별 연속성을 보장합니다.
+    all_centroids = []
     
-    # [학습 이동 궤적 시각화용 연산] 이전 단계(max_iter - 1)의 중심점 계산
-    if max_iter_value > 1:
-        kmeans_prev = KMeans(n_clusters=k_value, init='random', max_iter=max_iter_value - 1, n_init=1, random_state=42)
-        kmeans_prev.fit(pixels)
-        centroids_prev = kmeans_prev.cluster_centers_
-    else:
-        centroids_prev = None
+    for i in range(1, max_iter_value + 1):
+        km = KMeans(n_clusters=k_value, init='random', max_iter=i, n_init=1, random_state=42)
+        km.fit(pixels)
+        all_centroids.append(km.cluster_centers_)
+        
+        # 마지막 회차의 결과(현재 상태) 저장
+        if i == max_iter_value:
+            labels_current = km.labels_
+            centroids_current = km.cluster_centers_
 
     # 도안 이미지 생성
     quantized_pixels = centroids_current[labels_current]
@@ -97,7 +96,7 @@ if uploaded_file is not None:
         ])
         st.markdown(palette_html, unsafe_allow_html=True)
 
-    # --- TAB 2: 요청하신 4가지 핵심 데이터 요약 대시보드 ---
+    # --- TAB 2: 4가지 요구사항 집약 대시보드 ---
     with tab2:
         st.markdown("### 📊 정보 교과 탐구 및 알고리즘 정밀 분석")
         
@@ -129,58 +128,58 @@ if uploaded_file is not None:
             st.metric(label="💥 실제 데이터 용량 감소율", value=f"{actual_compression_ratio:.2f}% 감소")
             st.caption(f"- **원본 이미지 실제 크기:** {orig_bytes:,} Bytes")
             st.caption(f"- **압축 도안 실제 크기:** {compressed_bytes:,} Bytes")
-            st.caption(f"- **절약된 용량:** {orig_bytes - compressed_bytes:,} Bytes")
 
         st.markdown("---")
         
-        # 레이아웃 2: 3번(3D 시각화) & 4번(중심점 이동 과정 궤적) 결합 그래프
-        st.markdown("#### **[데이터 3 & 4] 3D RGB 색상 공간 군집화 및 중심점 이동 궤적(Trajectory) 추적**")
-        st.write("사이드바의 '반복 횟수'를 1회에서 2회, 3회로 늘릴 때마다, 무작위로 생성된 보석 중심점(◆)이 픽셀 무리 한가운데로 **이동한 선(궤적)**을 눈으로 확인할 수 있습니다.")
+        # 레이아웃 2: 3번(3D 시각화) & 4번(중심점 누적 잔상 이동 궤적) 결합 그래프
+        st.markdown("#### **[데이터 3 & 4] 3D RGB 색상 공간 군집화 및 중심점 누적 이동 궤적(Trace) 추적**")
+        st.write("사이드바의 '반복 횟수'를 늘릴수록, 처음에 지정된 무작위 보석 위치부터 현재 위치까지 **이동해 온 전체 경로가 실시간 잔상(흰 선)으로 누적**되어 나타납니다.")
+        st.info("💡 슬라이더를 1부터 시작해 5, 10으로 천천히 올리며 다이아몬드가 꼬리를 길게 늘어뜨리며 픽셀 중심으로 기어 들어가는지 관찰해보세요.")
         
-        # Plotly Graph Objects를 이용한 정밀 커스텀 3D 플로팅
         fig = go.Figure()
         
-        # 3. 3D RGB 색상 공간에서의 픽셀 데이터 군집화 시각화 (산점도 점)
+        # [데이터 3] 3D RGB 색상 공간에서의 픽셀 데이터 군집화 시각화 (산점도 점)
         df_pixels = pd.DataFrame(pixels, columns=['Red', 'Green', 'Blue'])
         df_pixels['Cluster'] = labels_current
         
-        # 최적화를 위해 데이터 포인트가 너무 많으면 최대 3000개만 샘플링하여 3D 차트 지연 방지
-        if len(df_pixels) > 3000:
-            df_pixels = df_pixels.sample(n=3000, random_state=42)
+        # 3D 차트 랙 방지를 위해 데이터가 너무 많으면 최대 2000개만 랜덤 샘플링
+        if len(df_pixels) > 2000:
+            df_pixels = df_pixels.sample(n=2000, random_state=42)
             
         for cluster_idx in range(k_value):
             cluster_data = df_pixels[df_pixels['Cluster'] == cluster_idx]
             fig.add_trace(go.Scatter3d(
                 x=cluster_data['Red'], y=cluster_data['Green'], z=cluster_data['Blue'],
                 mode='markers',
-                marker=dict(size=2, opacity=0.4),
+                marker=dict(size=2, opacity=0.3),
                 name=f"군집 {cluster_idx+1} 픽셀 무리"
             ))
             
-        # 4. K군집화 알고리즘 중심점의 이동 과정 (궤적 및 현재 위치 선 그리기)
-        for i in range(k_value):
-            current_ctr = centroids_current[i]
+        # [데이터 4] K군집화 알고리즘 중심점의 '누적 잔상' 이동 궤적 그리기
+        # 각 보석(k)별로 회차별 이동 경로를 추적하여 선으로 연결합니다.
+        for color_idx in range(k_value):
+            # 특정 보석의 1회차부터 현재 회차까지의 R, G, B 좌표 모으기
+            trace_r = [step[color_idx][0] for step in all_centroids]
+            trace_g = [step[color_idx][1] for step in all_centroids]
+            trace_b = [step[color_idx][2] for step in all_centroids]
             
-            # 만약 이전 단계 중심점이 존재한다면 이동 경로(선)를 그려줌
-            if list(centroids_prev) is not None:
-                prev_ctr = centroids_prev[i]
+            # 1회차부터 누적된 이동 경로 선(Line) 그리기
+            if len(trace_r) > 1:
                 fig.add_trace(go.Scatter3d(
-                    x=[prev_ctr[0], current_ctr[0]],
-                    y=[prev_ctr[1], current_ctr[1]],
-                    z=[prev_ctr[2], current_ctr[2]],
+                    x=trace_r, y=trace_g, z=trace_b,
                     mode='lines+markers',
-                    line=dict(color='white', width=4),
+                    line=dict(color='white', width=5),
                     marker=dict(size=4, color='yellow'),
-                    name=f"보석 {i+1} 이동 경로",
+                    name=f"보석 {color_idx+1} 이동 흔적",
                     showlegend=False
                 ))
             
-            # 현재 최종 중심점 위치 (큰 다이아몬드로 강조)
+            # 최종 도달한 현재 회차의 중심점 위치 (큰 다이아몬드)
             fig.add_trace(go.Scatter3d(
-                x=[current_ctr[0]], y=[current_ctr[1]], z=[current_ctr[2]],
+                x=[trace_r[-1]], y=[trace_g[-1]], z=[trace_b[-1]],
                 mode='markers',
-                marker=dict(size=10, symbol='diamond', color=hex_colors[i], line=dict(color='white', width=2)),
-                name=f"★ 보석 {i+1} 현재 중심점"
+                marker=dict(size=12, symbol='diamond', color=hex_colors[color_idx], line=dict(color='white', width=2)),
+                name=f"◆ 보석 {color_idx+1} 현재 중심점"
             ))
             
         fig.update_layout(
@@ -190,11 +189,10 @@ if uploaded_file is not None:
                 zaxis=dict(title='Blue (0-255)', range=[0, 255])
             ),
             margin=dict(l=0, r=0, b=0, t=0),
-            height=600
+            height=650
         )
         
         st.plotly_chart(fig, use_container_width=True)
-        st.caption("💡 **탐구 발문 예시:** 반복 횟수(max_iter)가 4~5회 이상을 넘어가면 왜 이동 경로를 나타내는 노란색 선이 더 이상 나타나지 않고 고정될까요? AI의 학습 완료 조건과 연결 지어 생각해보세요.")
-        
+
 else:
     st.info("👈 왼쪽 제어 패널에서 분석할 명화 이미지를 업로드해 주세요.")
