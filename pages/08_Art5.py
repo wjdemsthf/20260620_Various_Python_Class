@@ -33,7 +33,7 @@ st.sidebar.header("⚙️ 도안 제작 및 알고리즘 제어")
 
 sample_option = st.sidebar.selectbox(
     "1. 실험할 명화 선택",
-    ["직접 파일 업로드하기", "고흐 - 별이 빛나는 밤", "뭉크 - 절규"]
+    ["직접 파일 업로드하기", "고흐 - 별이 빛나는 밤", "뭉크 - 절규", "베르메르-진주 귀걸이를 한 소녀"]
 )
 
 # 파일 업로더 제어
@@ -84,6 +84,8 @@ elif sample_option == "고흐 - 별이 빛나는 밤":
     img = load_image_from_github("Starry_Night.jpg")
 elif sample_option == "뭉크 - 절규":
     img = load_image_from_github("The_Scream.jpg")
+elif sample_option == "베르메르-진주 귀걸이를 한 소녀":
+    img = load_image_from_github("진주 귀걸이를 한 소녀.jpg")
 
 # 3. 메인 로직 작동
 if img is not None:
