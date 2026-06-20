@@ -1,11 +1,9 @@
 import streamlit as st
 import requests
-import os
 import pandas as pd
-from dotenv import load_dotenv
 
-load_dotenv()
-API_KEY = os.getenv("RIOT_API_KEY")
+# 로컬(.env)이든 클라우드(Secrets)든 Streamlit이 알아서 키를 찾아옵니다!
+API_KEY = st.secrets["RIOT_API_KEY"]
 
 st.set_page_config(page_title="챔피언 스탯 분석", page_icon="📊")
 st.title("📊 챔피언 숙련도 분석")
