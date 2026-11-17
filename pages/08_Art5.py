@@ -140,13 +140,13 @@ if img is not None:
         # 🌟 변경 및 보완 포인트 1: 색상 칩과 HEX 코드가 한눈에 정렬되도록 HTML 템플릿 수정
         palette_html = "<div style='display: flex; flex-wrap: wrap; gap: 12px;'>"
         for i, c in enumerate(hex_colors):
-            palette_html += f"""
-            <div style='text-align: center; border: 1px solid #444; padding: 6px; border-radius: 6px; background-color: #1e1e1e; width: 85px;'>
-                <div style='font-weight: bold; color: #FFF; font-size: 13px; margin-bottom: 4px;'>{i+1}번</div>
-                <div style='background-color:{c}; width:100%; height:40px; border-radius:4px; border:1px solid #FFF;' title='보석 {i+1}: {c}'></div>
-                <div style='color: #AAA; font-size: 11px; font-family: monospace; margin-top: 4px;'>{c.upper()}</div>
-            </div>
-            """
+            palette_html += (
+                f"<div style='text-align: center; border: 1px solid #444; padding: 6px; border-radius: 6px; background-color: #1e1e1e; width: 85px;'>"
+                f"<div style='font-weight: bold; color: #FFF; font-size: 13px; margin-bottom: 4px;'>{i+1}번</div>"
+                f"<div style='background-color:{c}; width:100%; height:40px; border-radius:4px; border:1px solid #FFF;' title='보석 {i+1}: {c}'></div>"
+                f"<div style='color: #AAA; font-size: 11px; font-family: monospace; margin-top: 4px;'>{c.upper()}</div>"
+                f"</div>"
+            )
         palette_html += "</div>"
         st.markdown(palette_html, unsafe_allow_html=True)
 
